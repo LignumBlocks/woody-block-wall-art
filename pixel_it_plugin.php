@@ -8,7 +8,6 @@
  * Author URI: https://www.kode.com.co/
  **/
 
-add_action( 'admin_enqueue_scripts', 'my_enqueue' );
 
 /**
  * Enqueue my scripts and assets. load js scripts in the corresponding page
@@ -74,7 +73,9 @@ function my_enqueue() {
         )
     );
 }
+
 add_action("wp_enqueue_scripts", "my_enqueue");
+add_action( 'admin_enqueue_scripts', 'my_enqueue' );
 
 /**
  * Handles my AJAX request for product price change
@@ -212,3 +213,8 @@ function custom_new_product_image( $_product_img, $cart_item, $cart_item_key ) {
 }
 
 add_filter( 'woocommerce_cart_item_thumbnail', 'custom_new_product_image', 10, 3 );
+
+add_filter( 'woocommerce_cart_item_permalink', 'my_remove_cart_product_link', 10 );
+function my_remove_cart_product_link() {
+    return __return_null();
+}
