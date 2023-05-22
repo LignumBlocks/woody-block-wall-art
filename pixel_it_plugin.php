@@ -13,8 +13,7 @@
  * Enqueue my scripts and assets. load js scripts in the corresponding page
  *
  */
-function my_enqueue() {
-
+function my_enqueue() {   
 
     wp_enqueue_script(
         'ajax-script2',
@@ -58,6 +57,15 @@ function my_enqueue() {
         '1.0.0',
         'all'
     );
+
+    wp_enqueue_style(
+        'custom-style',
+        plugins_url( '/css/custom.css', __FILE__ ),
+        array(),
+        '1.0.0',
+        'all'
+    );
+   
 
     // send variables to the js script to use them in the ajax request, like the ajax url, the nonce, the cart url, etc.
     // They are accessed in the js script like wp_variables.ajax_url, wp_variables.nonce, etc.
@@ -215,6 +223,18 @@ function custom_new_product_image( $_product_img, $cart_item, $cart_item_key ) {
 add_filter( 'woocommerce_cart_item_thumbnail', 'custom_new_product_image', 10, 3 );
 
 add_filter( 'woocommerce_cart_item_permalink', 'my_remove_cart_product_link', 10 );
+
+add_filter("script_loader_tag", "add_module_to_my_script", 10, 3);
+
+function add_module_to_my_script($tag, $handle, $src)
+{
+    if ("ajax-script3" === $handle) {
+        $tag = '<script type="module" src="' . esc_url($src) . '"></script>';
+    }
+
+    return $tag;
+}
+
 function my_remove_cart_product_link() {
     return __return_null();
 }
