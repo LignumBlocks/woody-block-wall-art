@@ -182,9 +182,7 @@ const paint = async (allColors, xBlocks, yBlocks, callback) => {
         renderer.render(scene, camera);
     };
 
-    console.log("CABAOOO");
-
-    //end painting
+    //the painting finished
     callback();
     
     (async function(){
