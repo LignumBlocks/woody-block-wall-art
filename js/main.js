@@ -1,24 +1,37 @@
+import paint from "./3d.js";
+
 //DOM Elements
+let loaderWrapper;
+
 let fileInput = findElementById("input",'fileInput');
 let sourceImage = findElementById("img",'sourceImage');
-let outputWidthInput = findElementById("input",'outputWidth');
-let outputHeightInput = findElementById("input",'outputHeight');
-let btn1In = findElementById("a",'inBtn1');
-let btn2In = findElementById("a",'inBtn2');
+
+let btnEdit = findElementById("a",'btnEdit');
+let btnOk = findElementById("a",'btnOk');
+
 let canvas = findElementById("canvas",'pixelitcanvas');
 let uploadButton = findElementById("a",'uploadButton');
 let selectedFilename = findElementById("p",'selectedFilename');
 let pixelitImage = findElementById("img","pixelitImage");
 let pixelitImageFinal = findElementById("img","pixelitImageFinal");
-let descriptionField = findElementById("p","descriptionField");
-let priceLabel = findElementById("h2",'priceLabel');
-let previewBtn = findElementById("a",'previewBtn');
+//DOM on Side Bar
+
+let descriptionField;
+let priceLabel;
+let originalDescription;
+let outputWidthInput;
+let outputHeightInput;
+
+let btn1In;
+let btn2In;
+
 //Global Variables
+
+
 let xBlocks;
 let yBlocks;
 let colorCount;
 let cropper;
-let originalDescription = descriptionField.innerHTML;
 let outputWidth = 24;
 let outputHeight = 24;
 let blockSize = 2;
@@ -33,7 +46,7 @@ let minCroppedWidth = 200;
 let minCroppedHeight = 200;
 
 //Cropper settings
-cropperSettings = {
+let cropperSettings = {
     aspectRatio: 1, // 1:1 initial aspect ratio
     viewMode: 2, // View mode allow max zoom fit image in canvas
     zoomOnWheel: false, // Disable zooming on wheel
@@ -56,11 +69,11 @@ cropperSettings = {
             });
         }
 
-        data.textContent = JSON.stringify(cropper.getData(true));
+        //data.textContent = JSON.stringify(cropper.getData(true));
     }
 };
 // Canvas settings for pixelated image
-ctxSettings = {
+let ctxSettings = {
     willReadFrequently: true,
     mozImageSmoothingEnabled: false,
     webkitImageSmoothingEnabled: false,
@@ -68,46 +81,63 @@ ctxSettings = {
 };
 let ctx = canvas.getContext('2d', ctxSettings);
 
-function togglePreview(){
+/*function togglePreview(){
 // Mobile responsive, toggle visibility of preview and crop containers
-    if (previewBtn.innerHTML === "Preview"){
-        previewBtn.innerHTML = "Crop";
-        pixelitImage.parentElement.parentElement.style.display = "block";
+    if (previewBtn.innerHTML === "Ok"){
+        console.log("click OK");
+        //previewBtn.innerHTML = "Crop";
+        //pixelitImage.parentElement.parentElement.style.display = "block";
         sourceImage.parentElement.parentElement.style.display = "none";
     } else {
-        previewBtn.innerHTML = "Preview";
-        pixelitImage.parentElement.parentElement.style.display = "none";
+        console.log("click Edit");
+        previewBtn.innerHTML = "Edit";
+        //pixelitImage.parentElement.parentElement.style.display = "none";
         sourceImage.parentElement.parentElement.style.display = "block";
     }
-}
+}*/
+
 
 function updateResponsive(){
-    // Display preview button on mobile only
+    // Display preview button on mobile only   
+
     if (window.innerWidth < 768) {
-        previewBtn.innerHTML = "Preview";
-        previewBtn.parentElement.parentElement.style.display = "block";
-        sourceImage.parentElement.parentElement.style.display = "block";
-        pixelitImage.parentElement.parentElement.style.display = "none";
+        let pixelated = document.getElementById('pixelitImageFinal');
+        let componentData = sourceImage.parentElement.parentElement.getBoundingClientRect();
+        pixelated.style.height = componentData.height-40+'px';
+        //previewBtn.innerHTML = "Preview";
+        //previewBtn.parentElement.parentElement.style.display = "block";
+        //sourceImage.parentElement.parentElement.style.display = "block";
+       // pixelitImage.parentElement.parentElement.style.display = "none";
     } else {
-        previewBtn.parentElement.parentElement.style.display = "none";
-        sourceImage.parentElement.parentElement.style.display = "block";
-        pixelitImage.parentElement.parentElement.style.display = "block";
+        //previewBtn.parentElement.parentElement.style.display = "none";
+        //sourceImage.parentElement.parentElement.style.display = "block";
+       // pixelitImage.parentElement.parentElement.style.display = "block";
     }
 }
 
+function trimFileName(string, length = 35){
+    let parts = string.split(".");
+    if(string.length > length ){    
+        return string.substring(0, length)+"..."+parts[parts.length-1];
+    }
 
+    return string;
+
+}
 
 function createCropper() {
+    console.log("cambio la imagen");
     //Initialize image cropper when image is uploaded
     let file = fileInput.files[0];
-    fileType = file.type;
+    let fileType = file.type;
     //Allow only images
     if (!fileType.startsWith('image/')) {
         alert('Please upload only images (jpg, png,...)');
         return;
     }
-    selectedFilename.innerHTML = file.name;
-    src = URL.createObjectURL(file);
+    let trimTitle = trimFileName(file.name, 25);
+    selectedFilename.innerHTML = trimTitle;
+    let src = URL.createObjectURL(file);
     sourceImage.src = src;
     sourceImage.srcset = src;
     sourceImage.onload = function () {
@@ -116,12 +146,14 @@ function createCropper() {
         }
         cropper = new Cropper(sourceImage, cropperSettings);
     }
+
+    showCrop();
 }
 
 function setCropRatio() {
     // Update crop ratio when output width or height is changed
-    outputWidth = outputWidthInput.value;
-    outputHeight = outputHeightInput.value;
+    /*outputWidth = outputWidthInput.value;
+    outputHeight = outputHeightInput.value;*/
 
     if ((outputWidth % 2 != 0 || outputHeight % 2 != 0) && blockSize === 2){
         btn1In.click();
@@ -145,7 +177,7 @@ function updateNumBlocks() {
     xBlocks = Math.floor(outputWidth / blockSize);
     yBlocks = Math.floor(outputHeight  / blockSize);
 }
-function updateBlockSize(e){
+function updateBlockSize(id){
     // Update block size when clicked if valid
     id = this.id;
     if (id === "inBtn1") {
@@ -165,14 +197,15 @@ function updateBlockSize(e){
 }
 function calculatePrice() {
     // Calculate price of pixelated image
+    let pricePerSquareFoot = 0;
     if (blockSize=== 2){
         pricePerSquareFoot = 200;
     }
     if (blockSize=== 1){
         pricePerSquareFoot = 225;
     }
-    areaIn = outputWidth * outputHeight;
-    areaFt = areaIn / 144;
+    let areaIn = outputWidth * outputHeight;
+    let areaFt = areaIn / 144;
     return (pricePerSquareFoot * areaFt).toFixed(2);
 }
 
@@ -180,7 +213,7 @@ let currentPixelatedSrc;
 function pixelateImg(){
     console.log("Trying to pixelate image")
     // Pixelate image
-    croppedImage = cropper.getCroppedCanvas();
+    let croppedImage = cropper.getCroppedCanvas();
     if (croppedImage === null){
         console.log("cropped image is null")
         return;
@@ -188,27 +221,27 @@ function pixelateImg(){
     console.log("cropped image is valid")
     // Get cropped image
     // Set canvas size
-    croppedWidth = croppedImage.width;
-    croppedHeight = croppedImage.height;
-    ratio = croppedWidth / croppedHeight;
+    let croppedWidth = croppedImage.width;
+    let croppedHeight = croppedImage.height;
+    let ratio = croppedWidth / croppedHeight;
 
-    canvasWidth = 500;
-    canvasHeight = canvasWidth / ratio;
+    let canvasWidth = 500;
+    let canvasHeight = canvasWidth / ratio;
 
 
-    xBlockSize = Math.max(Math.floor(canvasWidth / xBlocks),1);
-    yBlockSize = Math.max(Math.floor(canvasHeight / yBlocks),1);
+    let xBlockSize = Math.max(Math.floor(canvasWidth / xBlocks),1);
+    let yBlockSize = Math.max(Math.floor(canvasHeight / yBlocks),1);
 
-    width = xBlockSize * xBlocks;
-    height = yBlockSize * yBlocks;
-    canvas.width = width;
+    let width = xBlockSize * xBlocks;
+    let height = yBlockSize * yBlocks;
+    canvas.width =  width;
     canvas.height = height;
 
     // Draw initial image
     ctx.drawImage(croppedImage, 0, 0, croppedImage.width, croppedImage.height,0,0,canvas.width,canvas.height);
     allColors = [];
     // Get image data in form of array of pixels (RGBA) not array of arrays
-    imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     imData = imageData.data;
     // Calculate average color of each block
     for (let y = 0; y < height; y += yBlockSize) {
@@ -224,10 +257,10 @@ function pixelateImg(){
                 for (let dx = 0; dx < xBlockSize; dx++) {
                     if (x + dx < width && y + dy < height) {
                         let offset = 4 * ((y + dy) * width + (x + dx));
-                        redValue = imData[offset];
-                        greenValue = imData[offset + 1];
-                        blueValue = imData[offset + 2];
-                        alphaValue = imData[offset + 3];
+                        let redValue = imData[offset];
+                        let greenValue = imData[offset + 1];
+                        let blueValue = imData[offset + 2];
+                        let alphaValue = imData[offset + 3];
 
 
                         if (alphaValue === 0) {
@@ -258,14 +291,15 @@ function pixelateImg(){
         }
     }
     // Cluster colors using kmeans
-    kmeansResult = kmeans(allColors, 30);
+    let kmeansResult = kmeans(allColors, 30);
     colorPalette = []
-    i = 0;
+    let i = 0;
     // Replace colors with cluster centroids
     for (let y = 0; y < height; y += yBlockSize) {
+        let newColor;
         for (let x = 0; x < width; x += xBlockSize) {
-            color = allColors[i];
-            clusterFound = false;
+            let color = allColors[i];
+            let clusterFound = false;
             for (let cluster of kmeansResult.clusters){
                 for (let point of cluster.points){
                     if (point === color){
@@ -305,7 +339,7 @@ function pixelateImg(){
         colorIndices[colorPalette[i]] = i;
     }
     // Create a dictionary of colors and their counts
-    countColors(allColors);
+    countColors(allColors);    
 
     //Display image and set download link
     currentPixelatedSrc = canvas.toDataURL();
@@ -315,35 +349,34 @@ function pixelateImg(){
 }
 
 function showImages() {
+    console.log("pixelateImg change", pixelateImg.src);
     pixelitImage.src = currentPixelatedSrc;
     pixelitImage.srcset = currentPixelatedSrc;
 
-    pixelitImageFinal.src = currentPixelatedSrc;
-    pixelitImageFinal.srcset = currentPixelatedSrc;
+    //pixelitImageFinal.src = currentPixelatedSrc;
+    //pixelitImageFinal.srcset = currentPixelatedSSrc;
     console.log("Updated images src")
-    console.log(currentPixelatedSrc)
+    //console.log(currentPixelatedSrc)
     pixelitImage.onload = function () {
         if (!(pixelitImage.src === currentPixelatedSrc && pixelitImage.srcset === currentPixelatedSrc)) {
             showImages()
         }
     }
-    pixelitImageFinal.onload = function () {
+    /*pixelitImageFinal.onload = function () {
         if (!(pixelitImageFinal.src === currentPixelatedSrc && pixelitImageFinal.srcset === currentPixelatedSrc)) {
             showImages()
         }
-    }
+    }*/
 }
 function writeDescription(){
     // Write description of product in the product description dom element
-    description = originalDescription.replace("{numBlocks}",xBlocks * yBlocks);
+    let description = originalDescription.replace("{numBlocks}",xBlocks * yBlocks);
     description = description.replace("{blockSize}",blockSize);
     description = description.replace("{width}",outputWidth);
     description = description.replace("{height}",outputHeight);
     description = description.replace("{weight}",calculateWeight());
-
     descriptionField.innerHTML = description;
     priceLabel.innerHTML = "$" + calculatePrice();
-
 }
 function calculateWeight(){
     // Calculate weight of product
@@ -378,17 +411,17 @@ function drawBlueprintPdf(){
     drawHeader();
     doc.text(10, 30, "Leyenda de colores: ");
 
-    y = 40;
+    let y = 40;
     var sortedIndices = [];
     for(var color in colorCount) {
-        idx = parseInt(colorIndices[color]);
+        let idx = parseInt(colorIndices[color]);
         sortedIndices.push(idx);
     }
     sortedIndices.sort(function (a,b) {
         return a - b; // Ascending
     });
 
-    x = 10;
+    let x = 10;
     for (let idx of sortedIndices){
         if (idx != 0 && idx%43 === 0){
             x += 70;
@@ -400,28 +433,28 @@ function drawBlueprintPdf(){
                 Y = 40;
             }
         }
-        colorObj = colorPalette[idx];
+        let colorObj = colorPalette[idx];
         doc.setDrawColor(0, 0, 0);
         doc.setFillColor(colorObj[0], colorObj[1], colorObj[2]);
         doc.rect(x, y - 3, 3, 3, 'FD');
         doc.setDrawColor(0, 0, 0);
-        text = 'Color ' + idx + ': ' + colorObj + ' (' + colorCount[colorObj] + ')';
+        let text = 'Color ' + idx + ': ' + colorObj + ' (' + colorCount[colorObj] + ')';
         doc.text(x + 5, y, text);
         y += 5.3;
     }
 
     // Draw image of product for reference
-    currentPage = 1
-    xBase = 0;
-    yBase = 0;
-    count = 0;
-    dx = 10;
-    dy = 35;
-    tileSize = 8 * blockSize;
-    tilesPerPage = 24 / blockSize;
-    horizontalPages = Math.ceil(xBlocks / tilesPerPage);
-    verticalPages = Math.ceil(yBlocks / tilesPerPage);
-    totalPages = horizontalPages * verticalPages;
+    let currentPage = 1
+    let xBase = 0;
+    let yBase = 0;
+    let count = 0;
+    let dx = 10;
+    let dy = 35;
+    let tileSize = 8 * blockSize;
+    let tilesPerPage = 24 / blockSize;
+    let horizontalPages = Math.ceil(xBlocks / tilesPerPage);
+    let verticalPages = Math.ceil(yBlocks / tilesPerPage);
+    let totalPages = horizontalPages * verticalPages;
 
 
     doc.addPage();
@@ -432,12 +465,12 @@ function drawBlueprintPdf(){
     // Draw grid of reference, all pages with numbers
     doc.addPage();
     drawHeader();
-    mapWidth = 8 * 24;
-    mapHeight = 8 * 24;
-    xDivision = mapWidth / horizontalPages;
-    yDivision = mapHeight / verticalPages;
-    k = 1;
-    fontSize = Math.min(xDivision, yDivision);
+    let mapWidth = 8 * 24;
+    let mapHeight = 8 * 24;
+    let xDivision = mapWidth / horizontalPages;
+    let yDivision = mapHeight / verticalPages;
+    let k = 1;
+    let fontSize = Math.min(xDivision, yDivision);
     for (var j = 0; j < verticalPages; j++) {
         for (var i = 0; i < horizontalPages; i++) {
             doc.setDrawColor(0, 0, 0);
@@ -455,8 +488,8 @@ function drawBlueprintPdf(){
         drawHeader();
         doc.text(10,30,"Plano: " + currentPage + " de " + totalPages);
 
-        currentX = xBase;
-        currentY = yBase;
+        let currentX = xBase;
+        let currentY = yBase;
         for (var xi = 0; xi < tilesPerPage; xi++) {
             currentX = xBase + xi;
             if (currentX == xBlocks) {
@@ -467,11 +500,11 @@ function drawBlueprintPdf(){
                 if (currentY >= yBlocks) {
                     break;
                 }
-                colorIdx = xBase + xi + (yBase + yi) * xBlocks;
-                color = allColors[colorIdx];
-                idx = colorIndices[color].toString();
-                xRect = dx + xi * tileSize;
-                yRect = dy + yi * tileSize;
+                let colorIdx = xBase + xi + (yBase + yi) * xBlocks;
+                let color = allColors[colorIdx];
+                let idx = colorIndices[color].toString();
+                let xRect = dx + xi * tileSize;
+                let yRect = dy + yi * tileSize;
                 doc.text(xRect + tileSize/2, yRect + tileSize / 2 + 2, idx, null, null, 'center');
                 doc.rect(xRect, yRect, tileSize, tileSize);
                 count++;
@@ -497,17 +530,17 @@ function drawColoredPdf(){
     drawHeader();
     doc.text(10, 30, "Leyenda de colores: ");
 
-    y = 40;
+    let y = 40;
     var sortedIndices = [];
     for(var color in colorCount) {
-        idx = parseInt(colorIndices[color]);
+        let idx = parseInt(colorIndices[color]);
         sortedIndices.push(idx);
     }
     sortedIndices.sort(function (a,b) {
         return a - b; // Ascending
     });
 
-    x = 10;
+    let x = 10;
     for (let idx of sortedIndices){
         if (idx != 0 && idx%43 === 0){
             x += 70;
@@ -519,27 +552,27 @@ function drawColoredPdf(){
                 Y = 40;
             }
         }
-        colorObj = colorPalette[idx];
+        let colorObj = colorPalette[idx];
         doc.setDrawColor(0, 0, 0);
         doc.setFillColor(colorObj[0], colorObj[1], colorObj[2]);
         doc.rect(x, y - 3, 3, 3, 'FD');
         doc.setDrawColor(0, 0, 0);
-        text = 'Color ' + idx + ': ' + colorObj + ' (' + colorCount[colorObj] + ')';
+        let text = 'Color ' + idx + ': ' + colorObj + ' (' + colorCount[colorObj] + ')';
         doc.text(x + 5, y, text);
         y += 5.3;
     }
-    currentPage = 1
-    xBase = 0;
-    yBase = 0;
-    count = 0;
+    let currentPage = 1
+    let xBase = 0;
+    let yBase = 0;
+    let count = 0;
 
-    dx = 10;
-    dy = 35;
-    tileSize = 8 * blockSize;
-    tilesPerPage = 24 / blockSize;
-    horizontalPages = Math.ceil(xBlocks / tilesPerPage);
-    verticalPages = Math.ceil(yBlocks / tilesPerPage);
-    totalPages = horizontalPages * verticalPages;
+    let dx = 10;
+    let dy = 35;
+    let tileSize = 8 * blockSize;
+    let tilesPerPage = 24 / blockSize;
+    let horizontalPages = Math.ceil(xBlocks / tilesPerPage);
+    let verticalPages = Math.ceil(yBlocks / tilesPerPage);
+    let totalPages = horizontalPages * verticalPages;
 
     doc.addPage();
     drawHeader();
@@ -549,12 +582,12 @@ function drawColoredPdf(){
 
     doc.addPage();
     drawHeader();
-    mapWidth = 8 * 24;
-    mapHeight = 8 * 24;
-    xDivision = mapWidth / horizontalPages;
-    yDivision = mapHeight / verticalPages;
-    k = 1;
-    fontSize = Math.min(xDivision, yDivision);
+    let mapWidth = 8 * 24;
+    let mapHeight = 8 * 24;
+    let xDivision = mapWidth / horizontalPages;
+    let yDivision = mapHeight / verticalPages;
+    let k = 1;
+    let fontSize = Math.min(xDivision, yDivision);
     for (var j = 0; j < verticalPages; j++) {
         for (var i = 0; i < horizontalPages; i++) {
             doc.setDrawColor(0, 0, 0);
@@ -571,8 +604,8 @@ function drawColoredPdf(){
         drawHeader();
         doc.text(10,30,"Plano: " + currentPage + " de " + totalPages);
 
-        currentX = xBase;
-        currentY = yBase;
+        let currentX = xBase;
+        let currentY = yBase;
         for (var xi = 0; xi < tilesPerPage; xi++) {
             currentX = xBase + xi;
             if (currentX == xBlocks) {
@@ -583,11 +616,11 @@ function drawColoredPdf(){
                 if (currentY >= yBlocks) {
                     break;
                 }
-                colorIdx = xBase + xi + (yBase + yi) * xBlocks;
-                color = allColors[colorIdx];
-                idx = colorIndices[color].toString();
-                xRect = dx + xi * tileSize;
-                yRect = dy + yi * tileSize;
+                let colorIdx = xBase + xi + (yBase + yi) * xBlocks;
+                let color = allColors[colorIdx];
+                let idx = colorIndices[color].toString();
+                let xRect = dx + xi * tileSize;
+                let yRect = dy + yi * tileSize;
                 doc.text(xRect + tileSize/2, yRect + tileSize / 2 + 2, idx, null, null, 'center');
                 doc.setDrawColor(0, 0, 0);
                 doc.setFillColor(color[0], color[1], color[2]);
@@ -610,28 +643,88 @@ function drawColoredPdf(){
 function setCropRatioInput(){
     // Set crop ratio from input
     setCropRatio();
+    showCrop();
+
 }
+
+
+function showBloks(){
+    loaderWrapper.style.display = "flex";
+    console.log(loaderWrapper.style.display);
+
+    selectedFilename.style.visibility = "hidden";
+
+    let pixel3D = document.getElementById('pixelitImageFinal');
+    
+    paint(allColors, xBlocks, yBlocks,() => { 
+        pixel3D.style.visibility = "visible";
+        loaderWrapper.style.display = "none";
+
+    });    
+    sourceImage.parentElement.parentElement.style.visibility = "hidden";
+    btnOk.parentElement.parentElement.style.display = "none";
+    btnEdit.parentElement.parentElement.style.display = "block";
+
+}
+
+function showCrop(){
+    selectedFilename.style.visibility = "visible";    
+    document.getElementById('pixelitImageFinal').style.visibility = "hidden";
+    sourceImage.parentElement.parentElement.style.visibility = "visible";   
+    btnOk.parentElement.parentElement.style.display = "block";
+    btnEdit.parentElement.parentElement.style.display = "none";
+}
+
+function resetPage(){
+    location.reload();
+}
+
+
 function init() {
+
     // Initialize listeners and initial state of the program
-    uploadButton.addEventListener("click", function () {fileInput.click();});
-    outputWidthInput.addEventListener("change", setCropRatioInput);
-    outputHeightInput.addEventListener("change", setCropRatioInput);
+    document.getElementById('pixelitImageFinal').style.visibility = "hidden";
+    btnEdit.parentElement.parentElement.style.display = "none";
+    jQuery(document).on('click', '#uploadButton', function(){
+        fileInput.click();
+    });
+    jQuery(document).on("change","#outputWidth", function(e){
+        //alert(e.target.value);
+        outputWidth = e.target.value;
+        setCropRatioInput();
+    });
+    jQuery(document).on("change","#outputHeight", function(e){
+        outputHeight = e.target.value;
+        setCropRatioInput();
+    });
+    
+    /*outputWidthInput.addEventListener("change", setCropRatioInput);
+    outputHeightInput.addEventListener("change", setCropRatioInput);*/
     fileInput.addEventListener("change", createCropper);
+    /*jQuery(document).on('click', '#inBtn1', function(){
+        updateBlockSize('#inBtn1');
+    });
+    jQuery(document).on('click', '#inBtn2', function(){
+        updateBlockSize('#inBtn2');
+    });*/
     btn1In.addEventListener("click", updateBlockSize);
     btn2In.addEventListener("click", updateBlockSize);
-    previewBtn.addEventListener("click", togglePreview);
+    btnOk.addEventListener("click", showBloks);
+    btnEdit.addEventListener("click", showCrop);
 
-    sourceImage.srcset = wp_variables.default_image;
-    sourceImage.src = wp_variables.default_image;
+    //sourceImage.srcset = wp_variables.default_image;
+    //sourceImage.src = wp_variables.default_image;
     cropper = new Cropper(sourceImage, cropperSettings);
     btn1In.click();
+
     addEventListener("resize", updateResponsive);
     updateResponsive();
 }
 
 function findElementById(tag,id) {
     // Find element by id and tag because of elementor nesting
-    parent = document.getElementById(id);
+    let parent = document.getElementById(id);
+    let element;
     if (parent){
         if (parent.tagName.toLowerCase() === tag) {
             element = parent;
@@ -643,16 +736,31 @@ function findElementById(tag,id) {
 }
 
 
-document.addEventListener("DOMContentLoaded", init);
+//document.addEventListener("DOMContentLoaded", init);
+//jQuery(document).ready(function($) {
+//jQuery(document).ready(function($) {
+document.addEventListener("DOMContentLoaded", function($) {
+    loaderWrapper = document.createElement("div");
+    loaderWrapper.classList.add("loader-wrapper");
+    let loader = document.createElement("div");
+    loader.classList.add("loader");
 
-jQuery(document).ready(function($) {
+    loaderWrapper.appendChild(loader);
+    document.body.appendChild( loaderWrapper );
+    loaderWrapper.style.display = "flex";
+} );
+
+jQuery( window ).on( "load", function() { 
+
     function addToCart() {
+        console.log("comprando");
+        loaderWrapper.style.display = "flex";
         //event
         // loading cursor
         document.body.style.cursor = 'wait';
         drawColoredPdf();
         drawBlueprintPdf();
-        $.post(wp_variables.ajax_url, {      //POST request
+        jQuery.post(wp_variables.ajax_url, {      //POST request
                 _ajax_nonce: wp_variables.nonce, //nonce
                 action: "change_price",         //action
                 price: calculatePrice(),               //data
@@ -660,13 +768,27 @@ jQuery(document).ready(function($) {
                 coloredBlueprint: coloredBlueprintFile,
                 pixelated_img_url: pixelitImage.src,
             }, function(data) {            //callback
+            loaderWrapper.style.display = "none";
+
                 document.body.style.cursor = 'default';
                 window.location.href = wp_variables.cart_url;
             }
         );
     }
     // Add to cart button ajax request for wordpress
-    $("#addToCart").on("click",addToCart);
-    $("#saveForLater").on("click",addToCart);
+    jQuery("#saveForLater").on("click",addToCart);
 
-} );
+    priceLabel = findElementById("h2",'priceLabel');
+    descriptionField = findElementById("p","descriptionField");
+    originalDescription = descriptionField.innerHTML;
+    outputWidthInput = findElementById("input",'outputWidth');
+    outputHeightInput = findElementById("input",'outputHeight');
+    
+    btn1In = findElementById("a",'inBtn1');
+    btn2In = findElementById("a",'inBtn2');
+    jQuery("#addToCart").on("click",addToCart);
+    loaderWrapper.style.display = "none";
+
+    init();
+ })
+

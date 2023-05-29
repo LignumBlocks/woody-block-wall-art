@@ -278,9 +278,10 @@
 }
 
 .cropper-hide {
-  display: block;
+  /*display: block;*/
   height: 0;
   position: absolute;
+  left: 9999px;
   width: 0;
 }
 
