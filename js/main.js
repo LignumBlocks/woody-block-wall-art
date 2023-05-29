@@ -45,6 +45,8 @@ let firstPixelateDrawn = false;
 let minCroppedWidth = 200;
 let minCroppedHeight = 200;
 
+let imageLoaded = false;
+
 //Cropper settings
 let cropperSettings = {
     aspectRatio: 1, // 1:1 initial aspect ratio
@@ -127,6 +129,7 @@ function trimFileName(string, length = 35){
 
 function createCropper() {
     console.log("cambio la imagen");
+    
     //Initialize image cropper when image is uploaded
     let file = fileInput.files[0];
     let fileType = file.type;
@@ -146,6 +149,8 @@ function createCropper() {
         }
         cropper = new Cropper(sourceImage, cropperSettings);
     }
+
+    imageLoaded = true;
 
     showCrop();
 }
@@ -376,7 +381,9 @@ function writeDescription(){
     description = description.replace("{height}",outputHeight);
     description = description.replace("{weight}",calculateWeight());
     descriptionField.innerHTML = description;
-    priceLabel.innerHTML = "$" + calculatePrice();
+    if(imageLoaded) {
+        priceLabel.innerHTML = "$" + calculatePrice();
+    }
 }
 function calculateWeight(){
     // Calculate weight of product
@@ -735,10 +742,6 @@ function findElementById(tag,id) {
     }
 }
 
-
-//document.addEventListener("DOMContentLoaded", init);
-//jQuery(document).ready(function($) {
-//jQuery(document).ready(function($) {
 document.addEventListener("DOMContentLoaded", function($) {
     loaderWrapper = document.createElement("div");
     loaderWrapper.classList.add("loader-wrapper");

@@ -2,7 +2,7 @@ import scene from "./lib/components/scene.js";
 import camera from "./lib/components/camera.js";
 import makeBlock from "./lib/components/block.js";
 import renderer from "./lib/components/renderer.js";
-import {directionalLight, ambientlight, spotLight} from "./lib/components/light.js";
+import {directionalLight, ambientlight, spotLight, spotLight1} from "./lib/components/light.js";
 import { Resizer } from "./lib/Resizer.js";
 import { container } from "./lib/components/renderer.js";
 import { gsap } from "./gsap/index.js";
@@ -22,6 +22,9 @@ import {
     Vector3
   } from "./lib/three.module.js";
 import { OrbitControls } from './lib/OrbitControls.js';
+import { ArcballControls } from './lib/ArcballControls.js';
+import  arcballGui  from './lib/components/CameraControls.js';
+
 import { RGBELoader } from "./lib/RGBELoader.js" 
 
 
@@ -37,11 +40,11 @@ const paint = async (allColors, xBlocks, yBlocks, callback) => {
         scene.remove(scene.children[0]); 
     }
 
-    const controls = new OrbitControls(camera, renderer.domElement);
+    //const controls = new OrbitControls(camera, renderer.domElement);
 
-    controls.dampingFactor = 0.05;
-    controls.enableDamping = true;  
-    controls.minDistance  = 5;
+    //controls.dampingFactor = 0.05;
+    //controls.enableDamping = true;  
+    //controls.minDistance  = 5;
 
     //controls.minAzimuthAngle = MathUtils.degToRad(-20);
     //controls.maxAzimuthAngle = MathUtils.degToRad(20);
@@ -49,7 +52,7 @@ const paint = async (allColors, xBlocks, yBlocks, callback) => {
     //controls.maxPolarAngle = MathUtils.degToRad(90); // default
     //controls.minPolarAngle = MathUtils.degToRad(60); // default
 
-    controls.update();
+    //controls.update();
 
     const textureLoader = new TextureLoader(); 
 
@@ -175,10 +178,13 @@ const paint = async (allColors, xBlocks, yBlocks, callback) => {
 
 
     scene.add(spotLight);
+    scene.add(spotLight1);
 
 
     const spotLightHelper = new SpotLightHelper( spotLight );
     scene.add( spotLightHelper );
+    const spotLightHelper1 = new SpotLightHelper( spotLight1 );
+    scene.add( spotLightHelper1 );
 
 
     scene.background = new Color( 0x000000 );
@@ -225,14 +231,28 @@ const paint = async (allColors, xBlocks, yBlocks, callback) => {
         renderer.render(scene, camera);
     };
 
+    let ballControls = new ArcballControls(camera,renderer.domElement,scene)
+    ballControls.addEventListener( 'change', render );
+
+    arcballGui.populateGui(ballControls);
+
     //end painting
+
+    render();
     callback();
     
-    (async function(){
+    
+    /*(async function(){
         renderer.setAnimationLoop(() => {            
         controls.update();
         renderer.render(scene, camera);
-    });})()
+    });})()*/
+
+    function render() {
+
+        renderer.render( scene, camera );
+
+    }
     
 }
 
